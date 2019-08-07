@@ -6,7 +6,7 @@ Airflow plugin with database hooks and operators for common data preparation tas
 Most data preparation jobs can be seen as direct acyclic graph (DAG) of tasks where tasks can be of
 different sorts:
 
-* downloading (updated) data from web urls into local filesystem
+* downloading data from web urls into local filesystem
 * loading files from local filesystem into a PostgreSQL table
 * transforming data using Python or SQL functions:
   * filtering
@@ -29,7 +29,7 @@ In Airflow, hooks are any kind of interface to external platforms and databases.
 
 #### Definition
 
-This plugin defines a hook called `PostgresDataset` to interact with a postgreSQL table that allows to
+This plugin defines a hook called `PostgresDataset` to interact with a PostgreSQL table in different ways:
 
 * read the schema of a dataset
 * read a dataset as Pandas dataframe
