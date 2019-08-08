@@ -53,13 +53,13 @@ conn_id = "my_conn_id"
 schema = "my_schema"
 
 # Input dataset
-dataset_1 = Dataset(
+dataset_1 = PostgresDataset(
   name="table_1",
   schema=schema,
   postgres_conn_id=conn_id)
 
 # Output dataset
-dataset_2 = Dataset(
+dataset_2 = PostgresDataset(
   name="table_2",
   schema=schema,
   postgres_conn_id=conn_id)
@@ -88,13 +88,13 @@ conn_id = "my_conn_id"
 schema = "my_schema"
 
 # Input dataset
-dataset_1 = Dataset(
+dataset_1 = PostgresDataset(
   name="table_1",
   schema=schema,
   postgres_conn_id=conn_id)
 
 # Output dataset
-dataset_2 = Dataset(
+dataset_2 = PostgresDataset(
   name="table_2",
   schema=schema,
   postgres_conn_id=conn_id)
@@ -130,18 +130,18 @@ conn_id = "my_conn_id"
 schema = "my_schema"
 
 # Input datasets
-dataset_1 = Dataset(
+dataset_1 = PostgresDataset(
   name="table_1",
   schema=schema,
   postgres_conn_id=conn_id)
 
-dataset_2 = Dataset(
+dataset_2 = PostgresDataset(
   name="table_2",
   schema=schema,
   postgres_conn_id=conn_id)
 
 # Output dataset
-dataset_3 = Dataset(
+dataset_3 = PostgresDataset(
   name="table_3",
   schema=schema,
   postgres_conn_id=conn_id)
