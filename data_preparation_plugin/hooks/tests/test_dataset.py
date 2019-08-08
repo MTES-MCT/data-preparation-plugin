@@ -6,7 +6,8 @@ import textwrap
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow import settings
 from airflow.models import Connection
-from sqlalchemy import Column, String, Integer
+from sqlalchemy import Column, String, Integer, BigInteger
+import pandas as pd
 
 from ..dataset import PostgresDataset
 
@@ -99,6 +100,7 @@ class DatasetTestCase(TestCase):
         cur.execute("SELECT COUNT(*) FROM test.test")
         count = cur.fetchone()[0]
         self.assertEqual(count, 2)
+        cur.close()
 
     def test_read_dtype(self):
         dtype = self.dataset.read_dtype()
@@ -107,6 +109,7 @@ class DatasetTestCase(TestCase):
         self.assertEqual(foo_column.name, 'foo')
         self.assertEqual(foo_column.table, None)
 
+    @skip
     def test_write_dtype(self):
         dtype = self.dataset.read_dtype()
         # add a column
@@ -131,3 +134,67 @@ class DatasetTestCase(TestCase):
             {'id': 1, 'foo': 'foo1'},
             {'id': 2, 'foo': 'foo2'}]
         self.assertEqual(rows, expected)
+
+    def test_get_dataframe(self):
+        insert = textwrap.dedent("""
+            INSERT INTO test.test (foo) VALUES ('foo1'), ('foo2')
+        """)
+        db = PostgresHook("postgres_test")
+        db.run(insert)
+        df = self.dataset.get_dataframe()
+        self.assertEqual(df.shape, (2, 2))
+        self.assertEqual(list(df.columns), ["id", "foo"])
+
+    def test_get_dataframes(self):
+        insert = textwrap.dedent("""
+            INSERT INTO test.test (foo) VALUES
+            ('foo1'), ('foo2'), ('foo3'), ('foo4'), ('foo5')
+        """)
+        db = PostgresHook("postgres_test")
+        db.run(insert)
+        dataframes = self.dataset.get_dataframes(chunksize=2)
+        self.assertEqual(len(list(dataframes)), 3)
+
+    def test_write_with_schema(self):
+
+        df = pd.DataFrame({
+            "column1": [1, 2, 3, 4],
+            "column2": ["a", "b", "c", "d"]
+        })
+
+        dataset = PostgresDataset(
+            name="test_2",
+            schema="test",
+            postgres_conn_id="postgres_test")
+
+        dataset.write_with_schema(df)
+
+        dtype = dataset.read_dtype(primary_key="id")
+
+        column_names = [column.name for column in dtype]
+
+        expected = ["id", "column1", "column2"]
+
+        self.assertEqual(column_names, expected)
+
+    @skip
+    def test_write_dataframe(self):
+
+        df1 = pd.DataFrame({
+            "foo": ["foo1", "foo2"]
+        })
+
+        df2 = pd.DataFrame({
+            "foo": ["foo3", "foo4"]
+        })
+
+        with self.dataset.get_writer() as writer:
+            writer.write_dataframe(df1)
+            writer.write_dataframe(df2)
+
+        db = PostgresHook("postgres_test")
+        cur = db.get_cursor()
+        cur.execute("SELECT COUNT(*) FROM test.test")
+        count = cur.fetchone()[0]
+        self.assertEqual(count, 4)
+        cur.close()

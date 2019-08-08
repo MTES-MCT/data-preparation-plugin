@@ -29,6 +29,19 @@ class PostgresDatasetWriter(object):
     def write_row_dict(self, row):
         self.rows.append(row)
 
+    def write_dataframe(self, df, dtype=None):
+        """
+        Write the dataframe to the dataset, overwriting
+        previous data. The schema of the dataframe must match
+        the schema of the dataset
+        """
+        df.to_sql(
+            self.dataset.name,
+            self.dataset.engine,
+            schema=self.dataset.pg_schema,
+            index=False,
+            if_exists='append')
+
 
 class PostgresDataset(PostgresHook):
     """
@@ -88,14 +101,24 @@ class PostgresDataset(PostgresHook):
 
         return self.mapper
 
-    def get_dataframe(self, sql=None):
+    def get_dataframe(self):
         """ Read the whole dataset into a pandas dataframe """
-        if sql is None:
-            sql = "SELECT * from {self.pg_schema}.{self.name}" \
-                .format(
-                    pg_schemaname=self.pg_schema,
-                    name=self.name)
+        sql = "SELECT * from {pg_schema}.{name}" \
+            .format(
+                pg_schema=self.pg_schema,
+                name=self.name)
         return self.get_pandas_df(sql)
+
+    def get_dataframes(self, chunksize):
+        """ Read the whole dataset as chunked pandas dataframes """
+        sql = "SELECT * from {pg_schema}.{name}" \
+            .format(
+                pg_schema=self.pg_schema,
+                name=self.name)
+
+        import pandas.io.sql as psql
+
+        return psql.read_sql(sql, con=self.engine, chunksize=chunksize)
 
     def iter_rows(self, head=None):
         """
@@ -121,12 +144,12 @@ class PostgresDataset(PostgresHook):
         """ Returns a writer to the dataset using a context manager """
         return PostgresDatasetWriter(self)
 
-    def read_dtype(self, primary_key=None):
+    def read_dtype(self, **kwargs):
         """
         Returns the data type of the dataset as a list
         of SQL Alchemy colums
         """
-        Mapper = self.reflect(primary_key=primary_key)
+        Mapper = self.reflect(**kwargs)
         columns = Mapper.__table__.columns
         return [column.copy() for column in columns]
 
@@ -147,25 +170,20 @@ class PostgresDataset(PostgresHook):
         table.create(self.engine)
         self.reflect(force=True)
 
+    def write_with_schema(self, df):
+        """ Write a pandas dataframe to the datatet
+        using implicit conversions between pandas types
+        and PostgreSQL types
+        """
+        df.to_sql(
+            self.name,
+            self.engine,
+            schema=self.pg_schema,
+            index=True,
+            index_label="id",
+            if_exists="replace",
+            method="multi")
+
     def get_session(self):
         Session = sessionmaker()
         return Session(bind=self.engine)
-
-    def write_from_dataframe(self, df, dtype=None):
-        """
-        Write the dataframe to the dataset, overwriting
-        previous data. The schema of the dataframe must match
-        the schema of the dataset
-        """
-        engine_kwargs = {"use_batch_mode": True}
-        engine = self.get_sqlalchemy_engine(engine_kwargs)
-
-        # TODO this is slow
-        df.to_sql(
-            self.name,
-            engine,
-            schema=self.pg_schema,
-            if_exists='replace',
-            index=True,
-            dtype=dtype)
-
