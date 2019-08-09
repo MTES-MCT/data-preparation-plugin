@@ -1,6 +1,7 @@
 # -*- coding=utf-8 -*-
 
 from airflow.hooks.postgres_hook import PostgresHook
+from airflow.utils.log.logging_mixin import LoggingMixin
 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
@@ -9,31 +10,46 @@ from sqlalchemy import Table
 Base = declarative_base()
 
 
-class PostgresDatasetWriter(object):
+class PostgresDatasetWriter(LoggingMixin):
     """
     Provides a writer to PostgresDataset
     """
 
-    def __init__(self, dataset):
+    def __init__(self, dataset, chunksize=1000):
         self.dataset = dataset
+        self.chunksize = chunksize
 
     def __enter__(self):
         self.rows = []
+        self.inserted = 0
         return self
 
     def __exit__(self, *args):
-        Mapper = self.dataset.reflect()
-        engine = self.dataset.engine
-        engine.execute(Mapper.__table__.insert(), self.rows)
+        self.flush()
+
+    def flush(self):
+        """ insert data into table """
+        if self.rows:
+            Mapper = self.dataset.reflect()
+            engine = self.dataset.engine
+            engine.execute(Mapper.__table__.insert(), self.rows)
+            self.rows = []
+            msg = "Inserted {n} rows into table {schema}.{name}".format(
+                n=self.inserted,
+                schema=self.dataset.pg_schema,
+                name=self.dataset.name)
+            self.log.info(msg)
 
     def write_row_dict(self, row):
         self.rows.append(row)
+        self.inserted += 1
+        if self.inserted % self.chunksize == 0:
+            self.flush()
 
     def write_dataframe(self, df, dtype=None):
         """
-        Write the dataframe to the dataset, overwriting
-        previous data. The schema of the dataframe must match
-        the schema of the dataset
+        Write the dataframe to the dataset, appending data
+        The schema of the dataframe must match the schema of the dataset
         """
         df.to_sql(
             self.dataset.name,
@@ -140,9 +156,9 @@ class PostgresDataset(PostgresHook):
         session.close()
         return rows
 
-    def get_writer(self):
+    def get_writer(self, *args, **kwargs):
         """ Returns a writer to the dataset using a context manager """
-        return PostgresDatasetWriter(self)
+        return PostgresDatasetWriter(self, *args, **kwargs)
 
     def read_dtype(self, **kwargs):
         """

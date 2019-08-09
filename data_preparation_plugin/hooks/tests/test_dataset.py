@@ -91,16 +91,13 @@ class DatasetTestCase(TestCase):
         db.run(drop_table, autocommit=True)
 
     def test_writer(self):
-        rows = [{"foo": "bar1"}, {"foo": "bar2"}]
-        with self.dataset.get_writer() as writer:
+        rows = [{"foo": "%s" % i} for i in range(0, 100)]
+        with self.dataset.get_writer(chunksize=10) as writer:
             for row in rows:
                 writer.write_row_dict(row)
         db = PostgresHook("postgres_test")
-        cur = db.get_cursor()
-        cur.execute("SELECT COUNT(*) FROM test.test")
-        count = cur.fetchone()[0]
-        self.assertEqual(count, 2)
-        cur.close()
+        count = db.get_first("SELECT COUNT(*) FROM test.test")[0]
+        self.assertEqual(count, 100)
 
     def test_read_dtype(self):
         dtype = self.dataset.read_dtype()
@@ -109,7 +106,6 @@ class DatasetTestCase(TestCase):
         self.assertEqual(foo_column.name, 'foo')
         self.assertEqual(foo_column.table, None)
 
-    @skip
     def test_write_dtype(self):
         dtype = self.dataset.read_dtype()
         # add a column
@@ -177,7 +173,6 @@ class DatasetTestCase(TestCase):
 
         self.assertEqual(column_names, expected)
 
-    @skip
     def test_write_dataframe(self):
 
         df1 = pd.DataFrame({
@@ -193,8 +188,8 @@ class DatasetTestCase(TestCase):
             writer.write_dataframe(df2)
 
         db = PostgresHook("postgres_test")
-        cur = db.get_cursor()
-        cur.execute("SELECT COUNT(*) FROM test.test")
-        count = cur.fetchone()[0]
+        count = db.get_first("SELECT COUNT(*) FROM test.test")[0]
+
+        records = db.get_records("SELECT * from test.test")
+
         self.assertEqual(count, 4)
-        cur.close()
