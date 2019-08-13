@@ -11,12 +11,12 @@ class DownloadUnzipOperator(BashOperator):
     url and extract the content to the data directory
     """
 
-    def __init__(self, url, **kwargs):
-        env = {**os.environ.copy(), "URL": url}
+    def __init__(self, url, dir_path, **kwargs):
+        env = {**os.environ.copy(), "URL": url, "DIR_PATH": dir_path}
         bash_command = textwrap.dedent("""
             TMPFILE=`mktemp`
             PWD=`pwd`
             wget "$URL" -O $TMPFILE
-            mkdir -p $ROOT_DIR/data
-            unzip -o -d $ROOT_DIR/data $TMPFILE""")
+            mkdir -p $DIR_PATH
+            unzip -o -d $DIR_PATH $TMPFILE""")
         super().__init__(bash_command=bash_command, env=env, **kwargs)
