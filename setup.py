@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="data_preparation_plugin",
-    version='0.1.3',
+    version='0.1.4',
     description="Airflow plugin with database hooks and" +
                 "operators for common data preparation tasks",
     entry_points={

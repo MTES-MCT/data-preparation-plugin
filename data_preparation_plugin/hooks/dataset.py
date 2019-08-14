@@ -136,7 +136,7 @@ class PostgresDataset(PostgresHook):
 
         return psql.read_sql(sql, con=self.engine, chunksize=chunksize)
 
-    def iter_rows(self, head=None):
+    def iter_rows(self, head=None, **reflect_kwargs):
         """
         Returns an iterator over all the rows of the datatset
         represented as dictionnary of (column, value) pairs
@@ -147,7 +147,7 @@ class PostgresDataset(PostgresHook):
                 d[column.name] = getattr(row, column.name)
             return d
 
-        Mapper = self.reflect()
+        Mapper = self.reflect(**reflect_kwargs)
         session = self.get_session()
         q = session.query(Mapper)
         if head:
@@ -160,12 +160,12 @@ class PostgresDataset(PostgresHook):
         """ Returns a writer to the dataset using a context manager """
         return PostgresDatasetWriter(self, *args, **kwargs)
 
-    def read_dtype(self, **kwargs):
+    def read_dtype(self, **reflect_kwargs):
         """
         Returns the data type of the dataset as a list
         of SQL Alchemy colums
         """
-        Mapper = self.reflect(**kwargs)
+        Mapper = self.reflect(**reflect_kwargs)
         columns = Mapper.__table__.columns
         return [column.copy() for column in columns]
 
