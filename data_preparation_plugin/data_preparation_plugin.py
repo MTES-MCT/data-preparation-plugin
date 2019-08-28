@@ -5,6 +5,7 @@ from .hooks.dataset import PostgresDataset
 from .operators.download import DownloadUnzipOperator
 from .operators.embulk import EmbulkOperator
 from .operators.shp2pgsql import Shp2pgsqlOperator
+from .operators.copy import CopyTableOperator
 
 
 class DataPreparationPlugin(AirflowPlugin):
@@ -13,4 +14,5 @@ class DataPreparationPlugin(AirflowPlugin):
     operators = [
         DownloadUnzipOperator,
         EmbulkOperator,
-        Shp2pgsqlOperator]
+        Shp2pgsqlOperator,
+        CopyTableOperator]
