@@ -6,7 +6,7 @@ from airflow.operators.postgres_operator import PostgresOperator
 
 stmt = textwrap.dedent("""
     DROP TABLE IF EXISTS {destination};
-    CREATE TABLE {destination} (LIKE {source} INCLUDING defaults indexes);
+    CREATE TABLE {destination} (LIKE {source} INCLUDING indexes);
     INSERT INTO {destination} SELECT * FROM {source}""")
 
 
