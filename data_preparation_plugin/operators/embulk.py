@@ -16,8 +16,8 @@ class EmbulkOperator(BashOperator):
 
     def __init__(self, embulk_config, **kwargs):
         env = {
-            **kwargs.pop("env", {}),
             **os.environ.copy(),
+            **kwargs.pop("env", {}),
             'EMBULK_CONFIG': embulk_config
         }
         cmd = '$EMBULK_BIN run $EMBULK_DIR/$EMBULK_CONFIG'
